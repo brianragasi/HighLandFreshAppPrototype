@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highland Fresh - Inventory Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .stat-card {
+            transition: transform 0.2s;
+            border-left: 4px solid #198754;
+            min-height: 120px;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-card.warning {
+            border-left-color: #ffc107;
+        }
+        .stat-card.danger {
+            border-left-color: #dc3545;
+        }
+        .inventory-table {
+            font-size: 0.9em;
+        }
+        .stock-status {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        .status-healthy {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .status-low {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+        .status-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .low-stock-row {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ffc107;
+        }
+        .out-of-stock-row {
+            background-color: #f8d7da !important;
+            border-left: 4px solid #dc3545;
+        }
+        /* Ensure proper responsive layout */
+        @media (max-width: 768px) {
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+        }
+        /* Fix any potential z-index issues */
+        .navbar {
+            z-index: 1030;
+            position: relative;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+        .dropdown-menu {
+            z-index: 1031;
+        }
+        .toast-container {
+            z-index: 1055;
+        }
+        /* Ensure cards don't overlap */
+        .card {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 1rem;
+        }
+        /* Prevent table overflow issues */
+        .table-responsive {
+            position: relative;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <img src="../images/highland_fresh_logo.jpg" alt="Highland Fresh Logo" class="navbar-logo">
+                Highland Fresh - Inventory Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3" id="userWelcome">Welcome, <span id="currentUser">User</span>!</span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> Account
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="admin-dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><a class="dropdown-item" href="purchase-orders.html"><i class="fas fa-shopping-cart"></i> Purchase Orders</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title text-success"><i class="fas fa-boxes"></i> Inventory Dashboard</h2>
+                        <p class="card-text">Monitor stock levels and manage inventory alerts for efficient stock management.</p>
+                        <div class="mb-3 d-flex flex-wrap gap-2">
+                            <button class="btn btn-success" onclick="refreshInventory()">
+                                <i class="fas fa-sync-alt"></i> Refresh Data
+                            </button>
+                            <a href="purchase-orders.html#create" class="btn btn-primary">
+                                <i class="fas fa-shopping-cart"></i> Create Purchase Order
+                            </a>
+                            <a href="purchase-orders.html#receive" class="btn btn-outline-primary">
+                                <i class="fas fa-truck-loading"></i> Receive Delivery
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="loadingSpinner" class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading inventory data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="statsContainer" class="row g-3 mb-4 d-none">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                <div class="card stat-card bg-light h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="fas fa-boxes fa-2x text-success mb-2"></i>
+                        <h6 class="card-title mb-1">Total Products</h6>
+                        <h4 class="text-success mb-1" id="totalProducts">0</h4>
+                        <small class="text-muted">Items in inventory</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                <div class="card stat-card warning bg-light h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                        <h6 class="card-title mb-1">Low Stock</h6>
+                        <h4 class="text-warning mb-1" id="lowStockCount">0</h4>
+                        <small class="text-muted"><span id="lowStockPercentage">0%</span> of total</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                <div class="card stat-card danger bg-light h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                        <h6 class="card-title mb-1">Out of Stock</h6>
+                        <h4 class="text-danger mb-1" id="outOfStockCount">0</h4>
+                        <small class="text-muted"><span id="outOfStockPercentage">0%</span> of total</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-sm-12">
+                <div class="card stat-card bg-light h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <h6 class="card-title mb-1">Healthy Stock</h6>
+                        <h4 class="text-success mb-1" id="healthyStockCount">0</h4>
+                        <small class="text-muted"><span id="healthyStockPercentage">0%</span> of total</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="controlsContainer" class="row mb-4 d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="searchInput" class="form-label">Search Products</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-search text-muted"></i>
+                                    </span>
+                                    <input type="text" id="searchInput" class="form-control" placeholder="Search by product name, SKU, or category...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="stockFilter" class="form-label">Filter by Stock</label>
+                                <select id="stockFilter" class="form-select">
+                                    <option value="all">All Products</option>
+                                    <option value="low_stock">Low Stock Only</option>
+                                    <option value="out_of_stock">Out of Stock Only</option>
+                                    <option value="healthy">Healthy Stock Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button class="btn btn-outline-success" onclick="refreshInventory()">
+                                        <i class="fas fa-sync-alt me-2"></i> Refresh Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="inventoryContainer" class="row d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-success">
+                            <i class="fas fa-list me-2"></i> Product Inventory
+                        </h5>
+                        <span class="badge bg-success" id="filteredCount">0 items</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover inventory-table mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-success">Product Name</th>
+                                        <th class="text-success">SKU</th>
+                                        <th class="text-success">Category</th>
+                                        <th class="text-success">Supplier</th>
+                                        <th class="text-success">Current Stock</th>
+                                        <th class="text-success">Reorder Level</th>
+                                        <th class="text-success">Unit</th>
+                                        <th class="text-success">Status</th>
+                                        <th class="text-success">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="errorAlert" class="row d-none">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="errorMessage">An error occurred</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+        <div id="emptyState" class="row d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Products Found</h4>
+                        <p class="text-muted">No products match your current filters.</p>
+                        <button class="btn btn-outline-success" onclick="refreshInventory()">
+                            <i class="fas fa-sync-alt me-2"></i> Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="successToast" class="toast" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="successMessage">
+                Operation completed successfully
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../js/api-handler.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/inventory/InventoryAPI.js"></script>
+    <script src="../js/inventory/InventoryRenderer.js"></script>
+    <script src="../js/inventory/InventoryFilters.js"></script>
+    <script src="../js/inventory/InventoryDashboard.js"></script>
+    <script>
+        // Initialize the inventory dashboard when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication first
+            if (!isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            // Check role authorization
+            if (!hasRole('Inventory') && !hasRole('Admin')) {
+                alert('Access denied. Inventory Staff or Administrator access required.');
+                window.location.href = 'admin-dashboard.html';
+                return;
+            }
+            // Update current user display
+            const currentUserElement = document.getElementById('currentUser');
+            if (currentUserElement && getLoggedInUser()) {
+                currentUserElement.textContent = getLoggedInUser().username;
+            }
+            // Initialize inventory dashboard
+            window.inventoryDashboard = new InventoryDashboard();
+            window.inventoryDashboard.init();
+        });
+        function refreshInventory() {
+            if (window.inventoryDashboard) {
+                window.inventoryDashboard.loadInventoryData();
+            }
+        }
+        function logout() {
+            if (typeof window.authLogout === 'function') {
+                window.authLogout();
+            } else {
+                // Fallback logout
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

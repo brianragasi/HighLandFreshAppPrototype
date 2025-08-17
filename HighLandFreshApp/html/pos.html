@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highland Fresh POS - Dairy Products Point of Sale</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../css/styles.css" rel="stylesheet">
+    <style>
+        /* Highland Fresh POS-specific styles */
+        .pos-container {
+            height: 100vh;
+            overflow: hidden;
+            background: var(--hf-bg);
+        }
+        
+        .pos-header {
+            background: var(--hf-primary);
+            color: white;
+            padding: 1rem;
+            box-shadow: var(--hf-shadow);
+        }
+        
+        .pos-main {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+        
+        .product-section {
+            flex: 2.5;
+            padding: 1rem;
+            border-right: 1px solid var(--hf-border);
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .cart-section {
+            flex: 1;
+            padding: 1rem;
+            background: var(--hf-light);
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Important for flexbox scrolling */
+        }
+
+        /* Fast Category Navigation */
+        .category-nav {
+            margin-bottom: 1rem;
+        }
+        
+        .category-btn {
+            background: white;
+            border: 2px solid var(--hf-border);
+            color: var(--hf-text);
+            padding: 0.75rem 1rem;
+            margin: 0.25rem;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-height: 50px;
+        }
+        
+        .category-btn:hover {
+            background: var(--hf-light);
+            border-color: var(--hf-primary);
+            transform: translateY(-2px);
+        }
+        
+        .category-btn.active {
+            background: var(--hf-primary);
+            border-color: var(--hf-primary);
+            color: white;
+        }
+
+        /* Quick Access Products */
+        .quick-products {
+            margin-bottom: 1rem;
+        }
+        
+        .product-card {
+            background: white;
+            border: 1px solid var(--hf-border);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .product-card:hover {
+            border-color: var(--hf-primary);
+            box-shadow: var(--hf-shadow);
+            transform: translateY(-2px);
+        }
+        
+        .product-image {
+            background: var(--hf-light);
+            border-radius: 8px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+            font-size: 2rem;
+            color: var(--hf-primary);
+        }
+        
+        .product-name {
+            font-weight: 600;
+            color: var(--hf-text);
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+        
+        .product-price {
+            font-weight: 700;
+            color: var(--hf-primary);
+            font-size: 1.1rem;
+            margin-top: auto;
+        }
+        
+        .product-stock {
+            font-size: 0.8rem;
+            color: var(--hf-muted);
+        }
+
+        /* Barcode Scanner */
+        .scanner-section {
+            background: white;
+            border: 2px dashed var(--hf-primary);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .scanner-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 1.2rem;
+            text-align: center;
+            width: 100%;
+            color: var(--hf-primary);
+            font-weight: 600;
+        }
+
+        /* Cart Styles */
+        .cart-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Important for flexbox scrolling */
+            height: 100%; /* Ensure full height usage */
+        }
+        
+        .cart-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--hf-shadow);
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+        
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            min-height: 0; /* Important for flexbox scrolling */
+            max-height: calc(100vh - 400px); /* Limit height to prevent button push-down */
+            padding-right: 0.5rem; /* Space for scrollbar */
+        }
+        
+        /* Custom scrollbar for cart items */
+        .cart-items::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .cart-items::-webkit-scrollbar-track {
+            background: var(--hf-light);
+            border-radius: 3px;
+        }
+        
+        .cart-items::-webkit-scrollbar-thumb {
+            background: var(--hf-primary);
+            border-radius: 3px;
+        }
+        
+        .cart-items::-webkit-scrollbar-thumb:hover {
+            background: var(--hf-primary-dark);
+        }
+        
+        .cart-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            box-shadow: var(--hf-shadow-sm);
+        }
+        
+        .item-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+        }
+        
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .qty-btn {
+            background: var(--hf-primary);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .qty-input {
+            width: 60px;
+            text-align: center;
+            border: 1px solid var(--hf-border);
+            border-radius: 6px;
+            padding: 0.25rem;
+        }
+
+        /* Payment Section */
+        .payment-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--hf-shadow);
+            flex-shrink: 0; /* Prevent payment section from shrinking */
+            margin-top: auto; /* Push to bottom if space available */
+        }
+        
+        .totals-section {
+            background: var(--hf-light);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .total-row.final {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--hf-primary);
+            border-top: 2px solid var(--hf-border);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .payment-input {
+            font-size: 1.3rem;
+            text-align: center;
+            font-weight: 600;
+            border: 2px solid var(--hf-border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .payment-input:focus {
+            border-color: var(--hf-primary);
+            box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.1);
+        }
+        
+        .quick-payment {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .quick-pay-btn {
+            padding: 0.75rem;
+            border: 1px solid var(--hf-border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-pay-btn:hover {
+            background: var(--hf-primary);
+            color: white;
+        }
+        
+        .process-btn {
+            background: var(--hf-primary);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+        
+        .process-btn:hover {
+            background: var(--hf-primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .process-btn:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pos-main {
+                flex-direction: column;
+            }
+            .product-section {
+                border-right: none;
+                border-bottom: 1px solid var(--hf-border);
+                max-height: 50vh;
+            }
+            .cart-section {
+                max-height: 50vh;
+            }
+            
+            /* Adjust cart items height for mobile */
+            .cart-items {
+                max-height: calc(50vh - 300px);
+            }
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            color: var(--hf-primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--hf-muted);
+            padding: 2rem;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Receipt Modal Styling */
+        #receiptModal .modal-body {
+            padding: 2rem;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+        }
+        
+        #receiptModal .modal-content {
+            border: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        #receiptContent {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px dashed var(--hf-border);
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        /* Receipt content styling */
+        #receiptContent .d-flex {
+            margin-bottom: 0.25rem;
+        }
+        
+        #receiptContent hr {
+            margin: 1rem 0;
+            border-color: var(--hf-border);
+        }
+        
+        #receiptContent .text-center h5 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+    </style>
+</head>
+<body>
+    <div class="pos-container">
+        
+        <div class="pos-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        <i class="bi bi-droplet-fill me-2"></i>Highland Fresh POS
+                    </h4>
+                    <small>Fast Dairy Product Sales</small>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end">
+                        <div class="fw-bold" id="currentUser">Loading...</div>
+                        <small id="currentTime"></small>
+                    </div>
+                    <a href="returns.html" class="btn btn-outline-light btn-sm" title="Process Returns (F4)">
+                        <i class="bi bi-arrow-return-left me-1"></i>Returns
+                    </a>
+                    <button type="button" class="btn btn-outline-light btn-sm" onclick="logout()">
+                        <i class="bi bi-box-arrow-right me-1"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="pos-main">
+            
+            <div class="product-section">
+                
+                <div class="scanner-section">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <i class="bi bi-upc-scan me-2" style="font-size: 1.5rem; color: var(--hf-primary);"></i>
+                        <strong style="color: var(--hf-primary);">Scan Barcode or Enter Product Code</strong>
+                    </div>
+                    <input type="text" 
+                           class="scanner-input" 
+                           id="barcodeInput"
+                           placeholder="Scan barcode here..."
+                           autocomplete="off"
+                           autofocus>
+                    <small class="text-muted">Fastest way to add products</small>
+                </div>
+
+                <div class="category-nav">
+                    <h6 class="mb-3" style="color: var(--hf-primary); font-weight: 600;">
+                        <i class="bi bi-grid-3x3-gap me-2"></i>Highland Fresh Categories
+                    </h6>
+                    <div class="d-flex flex-wrap">
+                        <button class="category-btn active" data-category="popular">
+                            <i class="bi bi-star-fill me-1"></i>Popular Items
+                        </button>
+                        <button class="category-btn" data-category="liquid-milk">
+                            <i class="bi bi-cup me-1"></i>Liquid Milk
+                        </button>
+                        <button class="category-btn" data-category="cheese">
+                            <i class="bi bi-emoji-smile me-1"></i>Cheese
+                        </button>
+                        <button class="category-btn" data-category="desserts">
+                            <i class="bi bi-snow me-1"></i>Desserts
+                        </button>
+                        <button class="category-btn" data-category="yogurt">
+                            <i class="bi bi-cup-straw me-1"></i>Yogurt
+                        </button>
+                        <button class="category-btn" data-category="all">
+                            <i class="bi bi-list me-1"></i>All Products
+                        </button>
+                    </div>
+                </div>
+
+                <div class="quick-products">
+                    <div id="productGrid" class="row g-3">
+                        
+                        <div class="col-12 text-center loading-spinner" id="loadingProducts">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading Highland Fresh products...</span>
+                            </div>
+                            <p class="mt-2">Loading Highland Fresh products...</p>
+                        </div>
+
+                        <div class="col-12 empty-state" id="emptyProducts" style="display: none;">
+                            <i class="bi bi-basket"></i>
+                            <h5>No Products Available</h5>
+                            <p>Please contact your manager or check inventory.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cart-section">
+                <div class="cart-container">
+                    
+                    <div class="cart-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0" style="color: var(--hf-primary); font-weight: 600;">
+                                <i class="bi bi-cart3 me-2"></i>Shopping Cart
+                            </h6>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearCart()" title="Clear Cart">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="holdTransaction()" title="Hold Transaction">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted" id="itemCount">0 items</small>
+                    </div>
+
+                    <div class="cart-items" id="cartItems">
+                        <div class="empty-state">
+                            <i class="bi bi-cart-x"></i>
+                            <h6>Cart is Empty</h6>
+                            <p>Scan barcodes or select products to add them to cart.</p>
+                        </div>
+                    </div>
+
+                    <div class="payment-section">
+                        <h6 class="mb-3" style="color: var(--hf-primary); font-weight: 600;">
+                            <i class="bi bi-credit-card me-2"></i>Highland Fresh Payment
+                        </h6>
+
+                        <div class="totals-section" id="cartTotals" style="display: none;">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span id="subtotal">₱0.00</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Discount:</span>
+                                <span id="discount" style="color: #dc3545;">₱0.00</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Tax:</span>
+                                <span id="tax">₱0.00</span>
+                            </div>
+                            <div class="total-row final">
+                                <span>TOTAL:</span>
+                                <span id="finalTotal">₱0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paymentReceived" class="form-label fw-bold">Payment Received</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: var(--hf-primary); color: white; border-color: var(--hf-primary);">₱</span>
+                                <input type="number" 
+                                       class="form-control payment-input" 
+                                       id="paymentReceived"
+                                       placeholder="0.00"
+                                       step="0.01"
+                                       min="0">
+                            </div>
+                        </div>
+
+                        <div class="quick-payment">
+                            <button class="quick-pay-btn" onclick="setExactPayment()">Exact</button>
+                            <button class="quick-pay-btn" onclick="addToPayment(20)">+₱20</button>
+                            <button class="quick-pay-btn" onclick="addToPayment(50)">+₱50</button>
+                            <button class="quick-pay-btn" onclick="addToPayment(100)">+₱100</button>
+                            <button class="quick-pay-btn" onclick="addToPayment(500)">+₱500</button>
+                            <button class="quick-pay-btn" onclick="addToPayment(1000)">+₱1000</button>
+                        </div>
+
+                        <div class="mb-3" id="changeSection" style="display: none;">
+                            <div class="alert alert-info text-center">
+                                <strong>Change: <span id="changeAmount">₱0.00</span></strong>
+                            </div>
+                        </div>
+
+                        <button class="process-btn" id="processSaleBtn" onclick="processSale()" disabled>
+                            <i class="bi bi-check-circle-fill me-2"></i>Process Highland Fresh Sale
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusMessage" class="position-fixed top-0 end-0 p-3" style="z-index: 1100; display: none;">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <span id="statusText">Success message</span>
+            <button type="button" class="btn-close" onclick="hideStatus()"></button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="receiptModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content main-card">
+                <div class="modal-header" style="background: var(--hf-primary); color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt me-2"></i>Highland Fresh Receipt
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="receiptContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-feature" onclick="printReceipt()">
+                        <i class="bi bi-printer me-1"></i>Print Receipt
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/api-handler.js"></script>
+    
+    <script>
+        // Highland Fresh POS System
+        let currentCategory = 'popular';
+        let products = [];
+        let cart = [];
+        let cartTotal = 0;
+
+        // Initialize Highland Fresh POS
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('=== Highland Fresh POS System Initialization ===');
+            
+            // Check all required DOM elements first
+            checkRequiredElements();
+            
+            // Check authentication first
+            await checkAuth();
+            
+            // Initialize POS components
+            await loadHighlandFreshProducts();
+            setupEventListeners();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
+            // Focus on barcode scanner
+            const barcodeInput = document.getElementById('barcodeInput');
+            if (barcodeInput) barcodeInput.focus();
+            
+            console.log('✅ Highland Fresh POS System ready!');
+        });
+
+        // Check if all required DOM elements exist
+        function checkRequiredElements() {
+            const requiredElements = [
+                'barcodeInput',
+                'productGrid',
+                'loadingProducts',
+                'emptyProducts', 
+                'cartItems',
+                'itemCount',
+                'cartTotals',
+                'subtotal',
+                'tax',
+                'finalTotal',
+                'paymentReceived',
+                'changeSection',
+                'changeAmount',
+                'processSaleBtn'
+            ];
+
+            console.log('=== DOM Element Check ===');
+            let missingElements = [];
+            
+            requiredElements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (!element) {
+                    missingElements.push(elementId);
+                    console.error(`❌ Missing element: ${elementId}`);
+                } else {
+                    console.log(`✅ Found element: ${elementId}`);
+                }
+            });
+
+            if (missingElements.length > 0) {
+                console.error('Missing DOM elements:', missingElements);
+                showError('POS interface elements missing. Please refresh the page.');
+            } else {
+                console.log('✅ All required DOM elements found');
+            }
+            
+            return missingElements.length === 0;
+        }
+
+        // Authentication check
+        async function checkAuth() {
+            try {
+                let user = getLoggedInUser();
+                let sessionStorageValid = user && user.role;
+
+                if (!sessionStorageValid) {
+                    const response = await fetch('../api/SessionStatusAPI.php', { credentials: 'include' });
+                    const sessionStatus = await response.json();
+                    
+                    if (sessionStatus.success && sessionStatus.authenticated) {
+                        user = sessionStatus.user;
+                        sessionStorage.setItem('user', JSON.stringify(user));
+                    } else {
+                        alert('Session expired. Please login again.');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                }
+
+                if (!user || (user.role !== 'Cashier' && user.role !== 'Admin')) {
+                    alert('Access denied. Cashier or Admin access required.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                document.getElementById('currentUser').textContent = user.username;
+                console.log('✅ User authenticated:', user.username, user.role);
+            } catch (error) {
+                console.error('Authentication failed:', error);
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Load Highland Fresh products
+        async function loadHighlandFreshProducts() {
+            try {
+                const response = await fetch('../api/ProductsAPI.php?operation=getAllProducts', { credentials: 'include' });
+                const result = await response.json();
+                
+                console.log('API Response:', result); // Debug log
+                
+                if (result.success && result.data) {
+                    products = result.data;
+                    console.log('✅ Loaded', products.length, 'Highland Fresh products');
+                } else {
+                    console.error('API Response Error:', result);
+                    products = []; // Initialize empty array
+                    showError('Failed to load Highland Fresh products: ' + (result.message || 'Unknown error'));
+                    return;
+                }
+                
+                // Ensure products is an array
+                if (!Array.isArray(products)) {
+                    console.error('Products is not an array:', products);
+                    products = [];
+                    showError('Invalid product data format received');
+                    return;
+                }
+                
+                displayProducts(currentCategory);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                products = []; // Initialize empty array on error
+                showError('Error loading Highland Fresh products: ' + error.message);
+                displayProducts(currentCategory); // Show empty state
+            }
+        }
+
+        // Display products by category
+        function displayProducts(category) {
+            const productGrid = document.getElementById('productGrid');
+            const loadingElement = document.getElementById('loadingProducts');
+            const emptyElement = document.getElementById('emptyProducts');
+            
+            // Hide loading state
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (emptyElement) emptyElement.style.display = 'none';
+            
+            // Check if products array exists and is valid
+            if (!products || !Array.isArray(products)) {
+                console.error('Products array is invalid:', products);
+                if (emptyElement) emptyElement.style.display = 'block';
+                return;
+            }
+            
+            let filteredProducts = [];
+            
+            try {
+                if (category === 'all') {
+                    filteredProducts = products;
+                } else if (category === 'popular') {
+                    // Show most commonly sold Highland Fresh items (first 12)
+                    filteredProducts = products.slice(0, 12);
+                } else {
+                    // Filter by category
+                    filteredProducts = products.filter(product => {
+                        if (!product.category) return false;
+                        return product.category.toLowerCase().includes(category.replace('-', ' '));
+                    });
+                }
+            } catch (error) {
+                console.error('Error filtering products:', error);
+                filteredProducts = [];
+            }
+            
+            // Show empty state if no products found
+            if (filteredProducts.length === 0) {
+                if (emptyElement) {
+                    emptyElement.style.display = 'block';
+                } else {
+                    productGrid.innerHTML = `
+                        <div class="col-12 empty-state">
+                            <i class="bi bi-basket"></i>
+                            <h5>No Highland Fresh Products Found</h5>
+                            <p>No products available in this category.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Display products
+            productGrid.innerHTML = filteredProducts.map(product => {
+                const productName = product.name || 'Unknown Product';
+                const productPrice = product.price || '0.00';
+                
+                // Use the correct field name from the database - quantity_on_hand
+                let productStock = parseInt(product.quantity_on_hand) || 0;
+                
+                // Debug log to see the actual stock value
+                console.log('Product stock for', productName, ':', {
+                    quantity_on_hand: product.quantity_on_hand,
+                    final_stock_value: productStock,
+                    product_object: product
+                });
+                
+                const productId = product.product_id;
+                
+                // Stock status styling
+                let stockClass = 'text-success';
+                let stockText = `${productStock} in stock`;
+                
+                if (productStock <= 0) {
+                    stockClass = 'text-danger';
+                    stockText = 'Out of stock';
+                } else if (productStock <= 5) {
+                    stockClass = 'text-warning';
+                    stockText = `${productStock} remaining`;
+                }
+                
+                return `
+                    <div class="col-lg-3 col-md-4 col-sm-6 col-6">
+                        <div class="product-card" onclick="addToCart(${productId})" data-product-id="${productId}">
+                            <div class="product-image">
+                                <i class="bi bi-droplet-fill"></i>
+                            </div>
+                            <div class="product-name">${productName}</div>
+                            <div class="product-price">₱${parseFloat(productPrice).toFixed(2)}</div>
+                            <div class="product-stock ${stockClass}">${stockText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log(`✅ Displayed ${filteredProducts.length} products for category: ${category}`);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Category buttons
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentCategory = btn.dataset.category;
+                    displayProducts(currentCategory);
+                });
+            });
+
+            // Barcode scanner
+            document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleBarcodeInput(e.target.value.trim());
+                    e.target.value = '';
+                }
+            });
+
+            // Payment input
+            document.getElementById('paymentReceived').addEventListener('input', calculateChange);
+            document.getElementById('paymentReceived').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !document.getElementById('processSaleBtn').disabled) {
+                    processSale();
+                }
+            });
+        }
+
+        // Handle barcode input
+        function handleBarcodeInput(barcode) {
+            if (!barcode) return;
+            
+            if (!products || !Array.isArray(products)) {
+                showError('Products not loaded. Please wait and try again.');
+                return;
+            }
+            
+            const product = products.find(p => {
+                const sku = p.sku || '';
+                const productBarcode = p.barcode || '';
+                return sku === barcode || productBarcode === barcode;
+            });
+            
+            if (product) {
+                const productId = product.product_id;
+                addToCart(productId);
+            } else {
+                showError('Product not found. Please check barcode.');
+                console.log('Barcode not found:', barcode, 'Available SKUs:', products.map(p => p.sku));
+            }
+        }
+
+        // Add product to cart
+        function addToCart(productId) {
+            if (!products || !Array.isArray(products)) {
+                showError('Products not loaded properly');
+                return;
+            }
+            
+            const product = products.find(p => p.product_id == productId);
+            if (!product) {
+                showError('Product not found');
+                console.error('Product not found with ID:', productId, 'Available products:', products);
+                return;
+            }
+            
+            // Use the correct field name from the database - quantity_on_hand
+            const productStock = parseInt(product.quantity_on_hand) || 0;
+            
+            console.log('Adding to cart - Product:', product.name, 'Stock:', productStock);
+            
+            if (productStock <= 0) {
+                const productName = product.name || 'Product';
+                showError(`${productName} is out of stock`);
+                return;
+            }
+
+            const productId_normalized = product.product_id;
+            const productName = product.name || 'Unknown Product';
+            const productPrice = parseFloat(product.price || 0);
+
+            const existingItem = cart.find(item => item.product_id == productId_normalized);
+            if (existingItem) {
+                if (existingItem.quantity >= productStock) {
+                    showError('Cannot exceed available stock');
+                    return;
+                }
+                existingItem.quantity++;
+                existingItem.line_total = existingItem.quantity * existingItem.unit_price;
+            } else {
+                cart.push({
+                    product_id: productId_normalized,
+                    name: productName,
+                    unit_price: productPrice,
+                    quantity: 1,
+                    line_total: productPrice,
+                    max_stock: productStock
+                });
+            }
+            
+            updateCartDisplay();
+            updateTotals();
+            
+            // Show success message
+            showSuccess(`${productName} added to cart`);
+        }
+
+        // Remove from cart
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.product_id !== productId);
+            updateCartDisplay();
+            updateTotals();
+        }
+
+        // Update quantity
+        function updateQuantity(productId, newQuantity) {
+            const item = cart.find(item => item.product_id === productId);
+            if (!item) return;
+            
+            if (newQuantity <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+            
+            if (newQuantity > item.max_stock) {
+                showError('Cannot exceed available stock');
+                return;
+            }
+            
+            item.quantity = newQuantity;
+            item.line_total = item.quantity * item.unit_price;
+            updateCartDisplay();
+            updateTotals();
+        }
+
+        // Update cart display
+        function updateCartDisplay() {
+            const cartItems = document.getElementById('cartItems');
+            const itemCount = document.getElementById('itemCount');
+            
+            if (cart.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-cart-x"></i>
+                        <h6>Cart is Empty</h6>
+                        <p>Scan barcodes or select products to add them to cart.</p>
+                    </div>
+                `;
+                itemCount.textContent = '0 items';
+                return;
+            }
+            
+            cartItems.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${item.name}</div>
+                            <div class="text-muted small">₱${item.unit_price.toFixed(2)} each</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.product_id})" title="Remove item">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <div class="item-controls">
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="updateQuantity(${item.product_id}, ${item.quantity - 1})">-</button>
+                            <input type="number" class="qty-input" value="${item.quantity}" 
+                                   min="1" max="${item.max_stock}"
+                                   onchange="updateQuantity(${item.product_id}, parseInt(this.value))">
+                            <button class="qty-btn" onclick="updateQuantity(${item.product_id}, ${item.quantity + 1})">+</button>
+                        </div>
+                        <div class="fw-bold" style="color: var(--hf-primary);">₱${item.line_total.toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            itemCount.textContent = `${cart.reduce((sum, item) => sum + item.quantity, 0)} items`;
+        }
+
+        // Update totals
+        function updateTotals() {
+            console.log('updateTotals called, cart length:', cart.length);
+            
+            const subtotal = cart.reduce((sum, item) => sum + item.line_total, 0);
+            const tax = subtotal * 0.12; // 12% VAT
+            const total = subtotal + tax;
+            
+            cartTotal = total;
+            
+            const totalsSection = document.getElementById('cartTotals');
+            const processSaleBtn = document.getElementById('processSaleBtn');
+            
+            console.log('Elements found:', {
+                totalsSection: !!totalsSection,
+                processSaleBtn: !!processSaleBtn
+            });
+            
+            // Add null checks to prevent errors
+            if (!totalsSection) {
+                console.error('❌ cartTotals element not found');
+                return;
+            }
+            
+            if (!processSaleBtn) {
+                console.error('❌ processSaleBtn element not found');  
+                return;
+            }
+            
+            if (cart.length === 0) {
+                console.log('Cart is empty, hiding totals');
+                totalsSection.style.display = 'none';
+                processSaleBtn.disabled = true;
+                return;
+            }
+            
+            console.log('Showing totals, subtotal:', subtotal, 'tax:', tax, 'total:', total);
+            totalsSection.style.display = 'block';
+            
+            // Add null checks for total elements
+            const subtotalEl = document.getElementById('subtotal');
+            const taxEl = document.getElementById('tax');
+            const finalTotalEl = document.getElementById('finalTotal');
+            
+            console.log('Total elements found:', {
+                subtotalEl: !!subtotalEl,
+                taxEl: !!taxEl, 
+                finalTotalEl: !!finalTotalEl
+            });
+            
+            if (subtotalEl) subtotalEl.textContent = `₱${subtotal.toFixed(2)}`;
+            if (taxEl) taxEl.textContent = `₱${tax.toFixed(2)}`;
+            if (finalTotalEl) finalTotalEl.textContent = `₱${total.toFixed(2)}`;
+            
+            processSaleBtn.disabled = false;
+            calculateChange();
+        }
+
+        // Calculate change
+        function calculateChange() {
+            const paymentInput = document.getElementById('paymentReceived');
+            const changeSection = document.getElementById('changeSection');
+            const changeAmount = document.getElementById('changeAmount');
+            
+            // Add null checks
+            if (!paymentInput || !changeSection || !changeAmount) {
+                console.warn('Payment elements not found:', {
+                    paymentInput: !!paymentInput,
+                    changeSection: !!changeSection,
+                    changeAmount: !!changeAmount
+                });
+                return;
+            }
+            
+            const payment = parseFloat(paymentInput.value) || 0;
+            const change = payment - cartTotal;
+            
+            if (cart.length === 0) {
+                changeSection.style.display = 'none';
+                return;
+            }
+            
+            if (payment > 0) {
+                changeSection.style.display = 'block';
+                if (change >= 0) {
+                    changeAmount.textContent = `₱${change.toFixed(2)}`;
+                    changeAmount.parentElement.className = 'alert alert-success text-center';
+                    changeAmount.parentElement.innerHTML = `<strong>Change: ${changeAmount.textContent}</strong>`;
+                } else {
+                    changeAmount.textContent = `₱${Math.abs(change).toFixed(2)}`;
+                    changeAmount.parentElement.className = 'alert alert-warning text-center';
+                    changeAmount.parentElement.innerHTML = `<strong>Remaining: ${changeAmount.textContent}</strong>`;
+                }
+            } else {
+                changeSection.style.display = 'none';
+            }
+        }
+
+        // Quick payment functions
+        function setExactPayment() {
+            const paymentInput = document.getElementById('paymentReceived');
+            if (!paymentInput) {
+                console.error('Payment input not found');
+                return;
+            }
+            paymentInput.value = cartTotal.toFixed(2);
+            calculateChange();
+        }
+
+        function addToPayment(amount) {
+            const paymentInput = document.getElementById('paymentReceived');
+            if (!paymentInput) {
+                console.error('Payment input not found');
+                return;
+            }
+            const current = parseFloat(paymentInput.value) || 0;
+            paymentInput.value = (current + amount).toFixed(2);
+            calculateChange();
+        }
+
+        // Process sale
+        async function processSale() {
+            if (cart.length === 0) {
+                showError('Cart is empty');
+                return;
+            }
+            
+            const payment = parseFloat(document.getElementById('paymentReceived').value) || 0;
+            if (payment < cartTotal) {
+                showError('Insufficient payment');
+                return;
+            }
+            
+            const processSaleBtn = document.getElementById('processSaleBtn');
+            processSaleBtn.disabled = true;
+            processSaleBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing Highland Fresh Sale...';
+            
+            try {
+                const saleData = {
+                    items: cart.map(item => ({
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price
+                    })),
+                    payment_received: payment,
+                    customer_name: null, // Add customer info if needed
+                    notes: 'Highland Fresh POS Sale'
+                };
+                
+                const response = await fetch('../api/SalesAPI.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(saleData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Highland Fresh sale completed successfully!');
+                    
+                    // Show receipt
+                    showReceipt(result.sale || result.data, payment);
+                    
+                    // Clear cart
+                    clearCart();
+                } else {
+                    showError('Sale failed: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Sale error:', error);
+                showError('Sale processing failed. Please try again.');
+            } finally {
+                processSaleBtn.disabled = false;
+                processSaleBtn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Process Highland Fresh Sale';
+            }
+        }
+
+        // Clear cart
+        function clearCart() {
+            cart = [];
+            updateCartDisplay();
+            updateTotals();
+            
+            const paymentInput = document.getElementById('paymentReceived');
+            const barcodeInput = document.getElementById('barcodeInput');
+            
+            if (paymentInput) paymentInput.value = '';
+            if (barcodeInput) barcodeInput.focus();
+        }
+
+        // Show receipt
+        function showReceipt(sale, payment) {
+            const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+            const receiptContent = document.getElementById('receiptContent');
+            
+            const change = payment - cartTotal;
+            const saleId = sale ? (sale.id || sale.sale_id || 'N/A') : 'N/A';
+            
+            receiptContent.innerHTML = `
+                <div class="text-center mb-3">
+                    <h5 style="color: var(--hf-primary);">Highland Fresh</h5>
+                    <small>Dairy Products</small>
+                    <hr>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Sale #:</strong> ${saleId}<br>
+                    <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+                    <strong>Time:</strong> ${new Date().toLocaleTimeString()}<br>
+                    <strong>Cashier:</strong> ${document.getElementById('currentUser').textContent}
+                </div>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    ${cart.map(item => `
+                        <div class="d-flex justify-content-between">
+                            <span>${item.name}</span>
+                            <span>₱${item.line_total.toFixed(2)}</span>
+                        </div>
+                        <div class="text-muted small mb-1">
+                            ${item.quantity} x ₱${item.unit_price.toFixed(2)}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between mb-1">
+                    <strong>Total:</strong>
+                    <strong>₱${cartTotal.toFixed(2)}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Payment:</span>
+                    <span>₱${payment.toFixed(2)}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Change:</span>
+                    <span>₱${change.toFixed(2)}</span>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">Thank you for choosing Highland Fresh!</small>
+                </div>
+            `;
+            
+            modal.show();
+        }
+
+        // Utility functions
+        function updateCurrentTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        function showSuccess(message) {
+            showStatus(message, 'success');
+        }
+
+        function showError(message) {
+            showStatus(message, 'error');
+        }
+
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            const alertDiv = statusMessage.querySelector('.alert');
+            
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+            document.getElementById('statusText').textContent = message;
+            statusMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        function holdTransaction() {
+            showError('Hold transaction feature not yet implemented');
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await fetch('../api/LogoutAPI.php', { method: 'POST' });
+                    sessionStorage.clear();
+                    window.location.href = 'login.html';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = 'login.html';
+                }
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // F1 - Focus barcode scanner
+            if (e.key === 'F1') {
+                e.preventDefault();
+                document.getElementById('barcodeInput').focus();
+            }
+            // F2 - Process sale
+            if (e.key === 'F2' && !document.getElementById('processSaleBtn').disabled) {
+                e.preventDefault();
+                processSale();
+            }
+            // F3 - Clear cart
+            if (e.key === 'F3') {
+                e.preventDefault();
+                if (confirm('Clear cart?')) clearCart();
+            }
+            // F4 - Go to Returns
+            if (e.key === 'F4') {
+                e.preventDefault();
+                window.location.href = 'returns.html';
+            }
+            // Escape - Focus barcode input
+            if (e.key === 'Escape') {
+                document.getElementById('barcodeInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>

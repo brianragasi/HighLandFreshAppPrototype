@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highland Fresh - Purchase Orders</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="../css/styles.css" rel="stylesheet">
+</head>
+<body>
+    
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="../html/admin-dashboard.html">
+                <img src="../images/highland_fresh_logo.jpg" alt="Highland Fresh Logo" class="navbar-logo">
+                Highland Fresh - Purchase Orders
+            </a>
+            <div class="navbar-nav ms-auto d-flex align-items-center">
+                <span class="navbar-text me-3" id="userWelcome">
+                    <i class="bi bi-person-circle me-1"></i>Welcome, Admin
+                </span>
+                <a href="../html/admin-dashboard.html" class="btn btn-outline-secondary btn-sm me-2">
+                    <i class="bi bi-grid me-1"></i>Dashboard
+                </a>
+                <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4 mb-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="dashboard-title mb-2">
+                            <i class="bi bi-cart4 me-2"></i>Purchase Orders
+                        </h1>
+                        <p class="dashboard-subtitle mb-0">
+                            <i class="bi bi-building me-1"></i>
+                            Dairy Cooperative Supply Chain & Highland Fresh Procurement
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-feature" id="createPOBtn">
+                        <i class="bi bi-plus-circle me-1"></i>Create Purchase Order
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="alertContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+
+        <div class="stats-row mb-4" id="statsContainer">
+            <div class="row g-0">
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalPOs">0</span>
+                        <div class="stat-label">Total POs</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number" id="pendingPOs">0</span>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number" id="inTransitPOs">0</span>
+                        <div class="stat-label">In Transit</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number" id="receivedPOs">0</span>
+                        <div class="stat-label">Received</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchPO" placeholder="Search PO number or supplier...">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="PO Sent">Sent</option>
+                    <option value="PO Confirmed">Confirmed</option>
+                    <option value="PO Partially Received">Partially Received</option>
+                    <option value="PO Received">Received</option>
+                    <option value="PO Cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="supplierFilter">
+                    <option value="">All Suppliers</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control" id="dateFromFilter" placeholder="From Date">
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control" id="dateToFilter" placeholder="To Date">
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card main-card">
+                    <div class="card-body">
+                        
+                        <div id="loadingSpinner" class="text-center py-5 d-none">
+                            <div class="spinner-border" style="color: var(--hf-primary);" role="status">
+                                <span class="visually-hidden">Loading Highland Fresh purchase orders...</span>
+                            </div>
+                            <div class="mt-2">Loading purchase orders...</div>
+                        </div>
+
+                        <div id="emptyState" class="text-center py-5 d-none">
+                            <div class="feature-icon mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.5rem;">
+                                <i class="bi bi-cart-x"></i>
+                            </div>
+                            <h5 class="text-muted mt-3">No Highland Fresh Purchase Orders Found</h5>
+                            <p class="text-muted">Create your first dairy purchase order to manage cooperative supply chain.</p>
+                            <button type="button" class="btn btn-feature" onclick="document.getElementById('createPOBtn').click()">
+                                <i class="bi bi-plus-circle me-1"></i>Create Purchase Order
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive" id="poTableContainer">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="color: var(--text-primary); font-weight: 600;">PO Number</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Supplier</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Total Amount</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Status</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Order Date</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Expected Delivery</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Items</th>
+                                        <th style="color: var(--text-primary); font-weight: 600;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="poTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="poModal" tabindex="-1" aria-labelledby="poModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title" id="poModalLabel" style="color: var(--text-primary); font-weight: 600;">
+                        <i class="bi bi-droplet-half me-2" style="color: var(--hf-primary);"></i>Highland Fresh - Dairy Purchase Order
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="poForm">
+                        
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Purchase Type</label>
+                                <div class="btn-group w-100" role="group" id="purchaseTypeGroup">
+                                    <input type="radio" class="btn-check" name="purchase_type" id="rawMilkType" value="raw_milk" checked>
+                                    <label class="btn btn-outline-success" for="rawMilkType">
+                                        <i class="bi bi-droplet me-2"></i>Raw Milk from Cooperatives
+                                    </label>
+                                    <input type="radio" class="btn-check" name="purchase_type" id="packagingType" value="packaging">
+                                    <label class="btn btn-outline-primary" for="packagingType">
+                                        <i class="bi bi-box-seam me-2"></i>Packaging & Supplies
+                                    </label>
+                                    <input type="radio" class="btn-check" name="purchase_type" id="generalType" value="general">
+                                    <label class="btn btn-outline-secondary" for="generalType">
+                                        <i class="bi bi-cart3 me-2"></i>General Supplies
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="supplierSelect" class="form-label">
+                                    <span id="supplierLabel">Dairy Cooperative / Farm</span> *
+                                </label>
+                                <select class="form-select" id="supplierSelect" name="supplier_id" required>
+                                    <option value="">Select Dairy Supplier</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                                
+                                <div id="supplierInfo" class="mt-2 p-2 bg-light rounded d-none">
+                                    <small class="text-muted">
+                                        <div id="supplierDetails"></div>
+                                        <div id="cooperativeInfo" class="text-success d-none">
+                                            <i class="bi bi-patch-check-fill me-1"></i><strong>NMFDC Member Cooperative</strong>
+                                        </div>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="expectedDeliveryDate" class="form-label">Expected Delivery Date *</label>
+                                <input type="date" class="form-control" id="expectedDeliveryDate" name="expected_delivery_date" required>
+                                <div class="invalid-feedback"></div>
+                                <small class="text-muted" id="deliveryNote">Daily milk delivery schedule</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3" id="dairySpecificFields">
+                            <div class="col-md-4">
+                                <label for="milkQualityGrade" class="form-label">Milk Quality Grade</label>
+                                <select class="form-select" id="milkQualityGrade" name="milk_quality_grade">
+                                    <option value="">Select Quality Grade</option>
+                                    <option value="Grade A">Grade A (Premium)</option>
+                                    <option value="Grade B">Grade B (Standard)</option>
+                                    <option value="Grade C">Grade C (Economy)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="coldChainTemp" class="form-label">Storage Temperature (°C)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="coldChainTempMin" name="cold_chain_temp_min" placeholder="Min" step="0.1" value="2.0">
+                                    <span class="input-group-text">to</span>
+                                    <input type="number" class="form-control" id="coldChainTempMax" name="cold_chain_temp_max" placeholder="Max" step="0.1" value="6.0">
+                                </div>
+                                <small class="text-muted">Cold chain temperature range</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="deliverySchedule" class="form-label">Delivery Schedule</label>
+                                <select class="form-select" id="deliverySchedule" name="delivery_schedule">
+                                    <option value="Daily">Daily</option>
+                                    <option value="Weekly">Weekly</option>
+                                    <option value="Bi-weekly">Bi-weekly</option>
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="On-demand">On-demand</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Optional notes for the supplier (batch, special handling, quality specs)"></textarea>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6>Product Selection <span class="badge bg-success ms-2">Highland Fresh Products</span></h6>
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="productSearch" placeholder="Search Highland Fresh products or supplies...">
+                                    <button type="button" class="btn btn-outline-secondary" id="showAllProductsBtn">
+                                        Show All
+                                    </button>
+                                </div>
+                                <div id="productSelectionContainer" class="border rounded p-3 mb-3" style="max-height: 200px; overflow-y: auto;">
+                                    <div id="productLoadingSpinner" class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                                        <small class="ms-2">Loading products...</small>
+                                    </div>
+                                    <div id="productList">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>Selected Items</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th>Unit Cost</th>
+                                            <th>Line Total</th>
+                                            <th>Batch/Lot</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="selectedItemsTable">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-success fw-bold">
+                                            <td colspan="4" class="text-end">Total Amount:</td>
+                                            <td id="totalAmount">₱0.00</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <div id="noItemsMessage" class="text-center text-muted py-3">
+                                <i class="bi bi-cart-x"></i> No items selected. Search and add products above.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-feature" id="savePOBtn">
+                        <span class="spinner-border spinner-border-sm d-none me-2" id="saveSpinner"></span>
+                        <i class="bi bi-truck me-1"></i>Create Purchase Order
+                    </button>
+                </div>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="poDetailsModal" tabindex="-1" aria-labelledby="poDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title" id="poDetailsModalLabel" style="color: var(--text-primary); font-weight: 600;">
+                        <i class="bi bi-file-earmark-text me-2" style="color: var(--hf-primary);"></i>Purchase Order Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="poDetailsContent">
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-feature" id="markReceivedBtn" style="display: none;">
+                        <i class="bi bi-check-circle me-1"></i>Mark as Received
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="receiveDeliveryModal" tabindex="-1" aria-labelledby="receiveDeliveryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title" id="receiveDeliveryModalLabel" style="color: var(--text-primary); font-weight: 600;">
+                        <i class="bi bi-truck me-2" style="color: var(--hf-primary);"></i>Receive Highland Fresh Delivery
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Supplier:</label>
+                            <p id="receiveSupplierName" class="mb-0">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Order Date:</label>
+                            <p id="receiveOrderDate" class="mb-0">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Expected Delivery:</label>
+                            <p id="receiveExpectedDate" class="mb-0">-</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Ordered</th>
+                                    <th class="text-center">Previously Received</th>
+                                    <th class="text-center">Remaining</th>
+                                    <th class="text-center">Receiving Now</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiveItemsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Instructions:</strong> Enter the quantities you are receiving now. 
+                        Stock levels will be automatically updated when you confirm the delivery.
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-feature" onclick="window.poManager.processDeliveryReceipt()">
+                        <i class="bi bi-truck me-1"></i>Confirm Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="../js/api-handler.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/purchase-orders/PurchaseOrderAPI.js"></script>
+    <script src="../js/purchase-orders/ProductSelector.js"></script>
+    <script src="../js/purchase-orders/PurchaseOrderForm.js"></script>
+    <script src="../js/purchase-orders/PurchaseOrderManager.js"></script>
+    <script>
+        // Check authentication and initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Purchase Orders - Initializing...');
+            
+            // For testing - bypass auth temporarily if needed
+            // Uncomment the next line if you want to test without login
+            window.bypassAuth = true;
+            
+            // Set mock user data for testing
+            if (window.bypassAuth) {
+                sessionStorage.setItem('user', JSON.stringify({
+                    user_id: 1,
+                    username: 'test_admin',
+                    first_name: 'Test',
+                    last_name: 'Admin',
+                    role: 'Admin',
+                    email: 'admin@highland-fresh.com'
+                }));
+                sessionStorage.setItem('isAuthenticated', 'true');
+            }
+            
+            try {
+                // Auth check using shared helpers
+                if (!window.bypassAuth && (!window.isAuthenticated || !isAuthenticated())) {
+                    console.log('Not authenticated - redirecting to login');
+                    window.location.href = '../html/login.html';
+                    return;
+                }
+                
+                // Role authorization (Inventory or Admin) - skip if bypassing auth
+                if (!window.bypassAuth && !(window.hasRole && (hasRole('Inventory') || hasRole('Admin')))) {
+                    alert('Access denied. This page is only available to Inventory Staff and Administrators.');
+                    window.location.href = '../html/admin-dashboard.html';
+                    return;
+                }
+                
+                // Set username in navigation
+                const user = window.getLoggedInUser ? getLoggedInUser() : null;
+                const navUsername = document.getElementById('navUsername');
+                if (navUsername) {
+                    navUsername.textContent = (user && user.username) ? user.username : 'User';
+                }
+                
+                console.log('Initializing Purchase Order Manager...');
+                
+                // Initialize Purchase Order Manager
+                window.poManager = new PurchaseOrderManager();
+                
+                console.log('Purchase Order Manager initialized successfully');
+                
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                
+                // Show user-friendly error message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                alertDiv.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Initialization Error:</strong> ${error.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(alertDiv);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (alertDiv && alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 5000);
+            }
+        });
+        
+        // Logout function
+        function logout() {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.href = '../html/login.html';
+        }
+        
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+    </script>
+</body>
+</html>
